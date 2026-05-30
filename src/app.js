@@ -19,7 +19,6 @@ const notificationRoutes = require('./routes/notification.routes');
 const app = express();
 
 // Middleware
-const cors = require('cors');
 
 app.use(cors({
   origin: true,
