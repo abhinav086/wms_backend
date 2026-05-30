@@ -49,8 +49,12 @@ async function allocateOrder(orderId) {
       });
 
       // Create allocated inventory record (or update existing)
-      const allocatedInv = await inventoryModel.findOrCreate(line.sku_id, inv.bin_id, null);
-      if (allocatedInv.status !== 'allocated') {
+      const { rows: allocRows } = await pool.query(
+        "SELECT * FROM inventory WHERE sku_id = $1 AND bin_id = $2 AND status = 'allocated'",
+        [line.sku_id, inv.bin_id]
+      );
+      
+      if (allocRows.length === 0) {
         // Create a new allocated record
         await inventoryModel.create({
           sku_id: line.sku_id,
@@ -59,8 +63,8 @@ async function allocateOrder(orderId) {
           status: 'allocated',
         });
       } else {
-        await inventoryModel.update(allocatedInv.id, {
-          qty: allocatedInv.qty + allocateQty,
+        await inventoryModel.update(allocRows[0].id, {
+          qty: allocRows[0].qty + allocateQty,
         });
       }
 

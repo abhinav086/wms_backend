@@ -19,13 +19,13 @@ const notificationRoutes = require('./routes/notification.routes');
 const app = express();
 
 // Middleware
+const cors = require('cors');
+
 app.use(cors({
-  origin: [
-    process.env.CLIENT_URL || 'http://localhost:5173',
-    process.env.FLOOR_URL || 'http://localhost:5174',
-  ],
+  origin: true,
   credentials: true,
 }));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
