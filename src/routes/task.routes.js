@@ -9,6 +9,9 @@ router.get('/', authMiddleware, taskController.getAllTasks);
 // GET /api/tasks/next?worker_id= — next task for worker
 router.get('/next', authMiddleware, taskController.getNextForWorker);
 
+// GET /api/tasks/pending?worker_id= — pending assigned tasks for worker
+router.get('/pending', authMiddleware, taskController.getPendingForWorker);
+
 // GET /api/tasks/history?worker_id= — worker task history
 router.get('/history', authMiddleware, taskController.getHistoryForWorker);
 

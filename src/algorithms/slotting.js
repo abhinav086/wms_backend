@@ -1,5 +1,6 @@
 const pool = require('../core/db');
 const skuModel = require('../models/SKUModel');
+const binModel = require('../models/BinModel');
 
 /**
  * Slotting Algorithm — Best-Fit Bin Selection
@@ -37,7 +38,7 @@ async function findBestBin(skuId, qty) {
     FROM bins b
     LEFT JOIN inventory i ON i.bin_id = b.id AND i.status = 'available'
     LEFT JOIN skus s ON s.id = i.sku_id
-    WHERE b.status = 'active'
+    WHERE b.status = 'active' AND b.code NOT LIKE 'QA-%'
     GROUP BY b.id
     HAVING
       (b.volume_capacity_cm3 - COALESCE(SUM(i.qty * s.volume_cm3), 0)) >= $1 AND
@@ -47,7 +48,11 @@ async function findBestBin(skuId, qty) {
 
   const { rows: candidateBins } = await pool.query(sql, params);
 
-  if (candidateBins.length === 0) return null;
+  if (candidateBins.length === 0) {
+    // No existing bins fit the requirements
+    // System auto-creation disabled based on user configuration. Manager must manually create bins.
+    return null;
+  }
 
   // Filter by handling classes
   let filtered = candidateBins;
@@ -82,9 +87,25 @@ async function findBestBin(skuId, qty) {
     const dist = manhattanDistance(bin.x, bin.y, PACKOUT_X, PACKOUT_Y);
     const proximity = 1 / (1 + dist);
 
-    const score = (0.5 * volumeFit) + (0.3 * velocityMatch) + (0.2 * proximity);
+    // Weight-based Z-level matching
+    // Heavy items (> 10kg) should go to z=0 or z=1
+    // Light items (< 5kg) should go to z=3 or z=4
+    let zMatch = 0.5;
+    const skuWeight = sku.weight_kg || 0;
+    if (skuWeight >= 15) {
+      // Extremely heavy, MUST be at bottom
+      zMatch = bin.z === 0 ? 1 : bin.z === 1 ? 0.7 : 0;
+    } else if (skuWeight >= 5) {
+      // Medium weight, prefer lower half
+      zMatch = bin.z <= 2 ? 0.8 : 0.2;
+    } else {
+      // Light items, prefer upper half to save bottom space
+      zMatch = bin.z >= 3 ? 1 : bin.z === 2 ? 0.7 : 0.2;
+    }
 
-    return { ...bin, score, volumeFit, velocityMatch, proximity };
+    const score = (0.4 * volumeFit) + (0.2 * velocityMatch) + (0.1 * proximity) + (0.3 * zMatch);
+
+    return { ...bin, score, volumeFit, velocityMatch, proximity, zMatch };
   });
 
   // Step 3: Sort by score descending and return the best

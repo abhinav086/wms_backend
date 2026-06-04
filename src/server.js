@@ -3,7 +3,10 @@ const app = require('./app');
 
 const PORT = process.env.PORT || 5002;
 
+const { startAutoAssigner } = require('./algorithms/taskRouting');
+
 app.listen(PORT, () => {
+  startAutoAssigner();
   console.log('');
   console.log('╔══════════════════════════════════════════╗');
   console.log('║     WMS Backend API Server               ║');

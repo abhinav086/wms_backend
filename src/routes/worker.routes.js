@@ -6,6 +6,9 @@ const authMiddleware = require('../middlewares/auth');
 // GET /api/workers
 router.get('/', authMiddleware, workerController.getAllWorkers);
 
+// GET /api/workers/positions
+router.get('/positions', authMiddleware, workerController.getPositions);
+
 // GET /api/workers/:id
 router.get('/:id', authMiddleware, workerController.getById);
 

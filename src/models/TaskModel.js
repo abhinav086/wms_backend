@@ -13,12 +13,13 @@ class TaskModel extends BaseModel {
     return this.query(`
       SELECT t.*, s.name AS sku_name, s.code AS sku_code,
         ob.code AS origin_bin_code, db.code AS dest_bin_code,
-        u.name AS assignee_name
+        u.name AS assignee_name, o.ship_to AS order_ship_to
       FROM tasks t
       LEFT JOIN skus s ON s.id = t.sku_id
       LEFT JOIN bins ob ON ob.id = t.origin_bin_id
       LEFT JOIN bins db ON db.id = t.dest_bin_id
       LEFT JOIN users u ON u.id = t.assignee_id
+      LEFT JOIN orders o ON o.id = t.related_order_id
       WHERE t.status = 'offered'
       ORDER BY t.priority DESC, t.created_at ASC
     `);
@@ -29,11 +30,13 @@ class TaskModel extends BaseModel {
     return this.query(`
       SELECT t.*, s.name AS sku_name, s.code AS sku_code, s.barcode AS sku_barcode,
         ob.code AS origin_bin_code, ob.x AS origin_x, ob.y AS origin_y,
-        db.code AS dest_bin_code, db.x AS dest_x, db.y AS dest_y
+        db.code AS dest_bin_code, db.x AS dest_x, db.y AS dest_y,
+        o.ship_to AS order_ship_to
       FROM tasks t
       LEFT JOIN skus s ON s.id = t.sku_id
       LEFT JOIN bins ob ON ob.id = t.origin_bin_id
       LEFT JOIN bins db ON db.id = t.dest_bin_id
+      LEFT JOIN orders o ON o.id = t.related_order_id
       WHERE t.status = 'offered'
         AND (t.assignee_id IS NULL OR t.assignee_id = $1)
       ORDER BY t.priority DESC, t.created_at ASC
@@ -45,12 +48,13 @@ class TaskModel extends BaseModel {
     let sql = `
       SELECT t.*, s.name AS sku_name, s.code AS sku_code,
         ob.code AS origin_bin_code, db.code AS dest_bin_code,
-        u.name AS assignee_name
+        u.name AS assignee_name, o.ship_to AS order_ship_to
       FROM tasks t
       LEFT JOIN skus s ON s.id = t.sku_id
       LEFT JOIN bins ob ON ob.id = t.origin_bin_id
       LEFT JOIN bins db ON db.id = t.dest_bin_id
       LEFT JOIN users u ON u.id = t.assignee_id
+      LEFT JOIN orders o ON o.id = t.related_order_id
       WHERE 1=1
     `;
     const params = [];
@@ -80,11 +84,13 @@ class TaskModel extends BaseModel {
   async findWorkerHistory(workerId) {
     return this.query(`
       SELECT t.*, s.name AS sku_name, s.code AS sku_code, s.barcode AS sku_barcode,
-        ob.code AS origin_bin_code, db.code AS dest_bin_code
+        ob.code AS origin_bin_code, db.code AS dest_bin_code,
+        o.ship_to AS order_ship_to
       FROM tasks t
       LEFT JOIN skus s ON s.id = t.sku_id
       LEFT JOIN bins ob ON ob.id = t.origin_bin_id
       LEFT JOIN bins db ON db.id = t.dest_bin_id
+      LEFT JOIN orders o ON o.id = t.related_order_id
       WHERE t.assignee_id = $1 AND t.status IN ('done', 'expired', 'declined')
       ORDER BY t.completed_at DESC NULLS LAST, t.created_at DESC
     `, [workerId]);

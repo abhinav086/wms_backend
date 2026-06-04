@@ -15,6 +15,7 @@ const returnRoutes = require('./routes/return.routes');
 const mapRoutes = require('./routes/map.routes');
 const scanRoutes = require('./routes/scan.routes');
 const notificationRoutes = require('./routes/notification.routes');
+const systemRoutes = require('./routes/system.routes');
 
 const app = express();
 
@@ -65,6 +66,7 @@ app.use('/api/returns', returnRoutes);
 app.use('/api/map', mapRoutes);
 app.use('/api/scan', scanRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/system', systemRoutes);
 
 // Seed route (development only)
 if (process.env.NODE_ENV === 'development') {

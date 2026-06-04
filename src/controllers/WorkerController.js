@@ -6,6 +6,7 @@ class WorkerController extends BaseController {
   constructor() {
     super(userModel);
     this.getAllWorkers = this.getAllWorkers.bind(this);
+    this.getPositions = this.getPositions.bind(this);
     this.createWorker = this.createWorker.bind(this);
     this.updateWorker = this.updateWorker.bind(this);
     this.toggleStatus = this.toggleStatus.bind(this);
@@ -15,6 +16,26 @@ class WorkerController extends BaseController {
     try {
       const workers = await this.model.findAllWorkers();
       this.success(res, workers);
+    } catch (err) {
+      this.error(res, err.message, 500);
+    }
+  }
+
+  async getPositions(req, res) {
+    try {
+      const sql = `
+        SELECT u.id, u.name, u.status, u.role,
+          t.id AS active_task_id, t.type AS task_type, t.status AS task_status,
+          ob.x AS origin_x, ob.y AS origin_y, ob.z AS origin_z,
+          db.x AS dest_x, db.y AS dest_y, db.z AS dest_z
+        FROM users u
+        LEFT JOIN tasks t ON t.assignee_id = u.id AND t.status IN ('accepted', 'in_progress')
+        LEFT JOIN bins ob ON ob.id = t.origin_bin_id
+        LEFT JOIN bins db ON db.id = t.dest_bin_id
+        WHERE u.role = 'worker'
+      `;
+      const rows = await this.model.query(sql);
+      this.success(res, rows);
     } catch (err) {
       this.error(res, err.message, 500);
     }

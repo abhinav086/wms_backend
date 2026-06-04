@@ -12,4 +12,7 @@ router.get('/:id', authMiddleware, orderController.getOrderDetail);
 // POST /api/orders
 router.post('/', authMiddleware, orderController.createOrder);
 
+// DELETE /api/orders/:id
+router.delete('/:id', authMiddleware, orderController.deleteOrder);
+
 module.exports = router;

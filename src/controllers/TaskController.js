@@ -15,6 +15,7 @@ class TaskController extends BaseController {
     super(taskModel);
     this.getAllTasks = this.getAllTasks.bind(this);
     this.getNextForWorker = this.getNextForWorker.bind(this);
+    this.getPendingForWorker = this.getPendingForWorker.bind(this);
     this.getHistoryForWorker = this.getHistoryForWorker.bind(this);
     this.acceptTask = this.acceptTask.bind(this);
     this.declineTask = this.declineTask.bind(this);
@@ -40,6 +41,35 @@ class TaskController extends BaseController {
         return this.success(res, null);
       }
       this.success(res, task);
+    } catch (err) {
+      this.error(res, err.message, 500);
+    }
+  }
+
+  async getPendingForWorker(req, res) {
+    try {
+      const { worker_id } = req.query;
+      if (!worker_id) return this.error(res, 'worker_id query param required');
+
+      const pool = require('../core/db');
+      const { rows: tasks } = await pool.query(`
+        SELECT t.*, s.name AS sku_name, s.code AS sku_code, s.barcode AS sku_barcode, s.weight_kg AS sku_weight_kg,
+          ob.code AS origin_bin_code, ob.x AS origin_x, ob.y AS origin_y,
+          db.code AS dest_bin_code, db.x AS dest_x, db.y AS dest_y,
+          o.ship_to AS order_ship_to
+        FROM tasks t
+        LEFT JOIN skus s ON s.id = t.sku_id
+        LEFT JOIN bins ob ON ob.id = t.origin_bin_id
+        LEFT JOIN bins db ON db.id = t.dest_bin_id
+        LEFT JOIN orders o ON o.id = t.related_order_id
+        WHERE t.assignee_id = $1 AND t.status IN ('offered', 'accepted', 'in_progress')
+        ORDER BY 
+          CASE WHEN t.status IN ('accepted', 'in_progress') THEN 0 ELSE 1 END,
+          t.priority DESC, 
+          t.created_at ASC
+      `, [worker_id]);
+
+      this.success(res, tasks);
     } catch (err) {
       this.error(res, err.message, 500);
     }
@@ -238,13 +268,16 @@ class TaskController extends BaseController {
           );
           
           if (pendingPicks.length === 0) {
+            const orderLines = await orderModel.query("SELECT SUM(qty) AS total_qty FROM order_lines WHERE order_id = $1", [task.related_order_id]);
+            const totalQty = parseInt(orderLines[0]?.total_qty) || 1;
+
             // Create a single Pack task for the entire order
             await this.model.create({
               type: 'pack',
               status: 'offered',
               priority: 7,
               sku_id: null,
-              qty: 1,
+              qty: totalQty,
               related_order_id: task.related_order_id,
             });
           }
@@ -253,12 +286,16 @@ class TaskController extends BaseController {
         // Pack completed. Update order to packed and generate Ship task.
         if (task.related_order_id) {
           await orderModel.update(task.related_order_id, { status: 'packed' });
+
+          const orderLines = await orderModel.query("SELECT SUM(qty) AS total_qty FROM order_lines WHERE order_id = $1", [task.related_order_id]);
+          const totalQty = parseInt(orderLines[0]?.total_qty) || 1;
+
           await this.model.create({
             type: 'ship',
             status: 'offered',
             priority: 8,
             sku_id: null,
-            qty: 1,
+            qty: totalQty,
             related_order_id: task.related_order_id,
           });
         }

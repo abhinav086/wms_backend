@@ -11,6 +11,7 @@ class OrderController extends BaseController {
     this.getAllOrders = this.getAllOrders.bind(this);
     this.getOrderDetail = this.getOrderDetail.bind(this);
     this.createOrder = this.createOrder.bind(this);
+    this.deleteOrder = this.deleteOrder.bind(this);
   }
 
   async getAllOrders(req, res) {
@@ -77,6 +78,18 @@ class OrderController extends BaseController {
 
       const fullOrder = await this.model.findWithLines(order.id);
       this.success(res, fullOrder, 201);
+    } catch (err) {
+      this.error(res, err.message, 500);
+    }
+  }
+
+  async deleteOrder(req, res) {
+    try {
+      const orderId = req.params.id;
+      await this.model.query("DELETE FROM tasks WHERE related_order_id = $1", [orderId]);
+      await this.model.query("DELETE FROM order_lines WHERE order_id = $1", [orderId]);
+      await this.model.delete(orderId);
+      this.success(res, { message: 'Order deleted successfully' });
     } catch (err) {
       this.error(res, err.message, 500);
     }

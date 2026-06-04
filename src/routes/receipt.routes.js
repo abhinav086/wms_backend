@@ -12,4 +12,7 @@ router.get('/:id', authMiddleware, receiptController.getReceiptDetail);
 // POST /api/receipts
 router.post('/', authMiddleware, receiptController.createReceipt);
 
+// DELETE /api/receipts/:id
+router.delete('/:id', authMiddleware, receiptController.deleteReceipt);
+
 module.exports = router;

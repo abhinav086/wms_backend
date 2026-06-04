@@ -46,29 +46,39 @@ async function seed() {
 
     console.log('  ✓ 4 users created (1 manager + 3 workers)');
 
-    // Step 4: Create 50 bins (10x5 grid)
+    // Step 4: Create 250 bins (10x5 grid, 5 shelves each)
     const rows_arr = ['A', 'B', 'C', 'D', 'E'];
     const binIds = [];
 
+    const zWeights = {
+      0: 500, // Bottom shelf (heaviest)
+      1: 250,
+      2: 100,
+      3: 50,
+      4: 25   // Top shelf (lightest)
+    };
+
     for (let row = 0; row < 5; row++) {
       for (let col = 1; col <= 10; col++) {
-        const code = `${rows_arr[row]}-${String(col).padStart(2, '0')}`;
-        const handlingClasses = row < 2 
-          ? '{fragile,hazardous,heavy}' 
-          : row < 4 
-            ? '{fragile,heavy}' 
-            : '{general}';
+        for (let z = 0; z < 5; z++) {
+          const code = `${rows_arr[row]}-${String(col).padStart(2, '0')}-L${z}`;
+          const handlingClasses = row < 2 
+            ? '{fragile,hazardous,heavy}' 
+            : row < 4 
+              ? '{fragile,heavy}' 
+              : '{general}';
 
-        const { rows: [bin] } = await pool.query(`
-          INSERT INTO bins (code, x, y, z, int_length_cm, int_width_cm, int_height_cm, volume_capacity_cm3, max_weight_kg, allowed_handling_classes, status)
-          VALUES ($1, $2, $3, 0, 50, 50, 50, 50000, 100, $4, 'active')
-          RETURNING *
-        `, [code, col, row + 1, handlingClasses]);
+          const { rows: [bin] } = await pool.query(`
+            INSERT INTO bins (code, x, y, z, int_length_cm, int_width_cm, int_height_cm, volume_capacity_cm3, max_weight_kg, allowed_handling_classes, status)
+            VALUES ($1, $2, $3, $4, 50, 50, 50, 50000, $5, $6, 'active')
+            RETURNING *
+          `, [code, col, row + 1, z, zWeights[z], handlingClasses]);
 
-        binIds.push(bin.id);
+          binIds.push(bin.id);
+        }
       }
     }
-    console.log('  ✓ 50 bins created (10x5 grid: A-01 to E-10)');
+    console.log('  ✓ 250 bins created (10x5 grid: 5 levels A-01-L0 to E-10-L4)');
 
     // Step 5: Create 12 SKUs
     const skuData = [

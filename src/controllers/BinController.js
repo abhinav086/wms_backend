@@ -15,9 +15,9 @@ class BinController extends BaseController {
       const data = { ...req.body };
       
       // Enforce unique coordinates
-      const existingBin = await this.model.findByCoords(data.x, data.y);
+      const existingBin = await this.model.findByCoords(data.x, data.y, data.z);
       if (existingBin) {
-        return this.error(res, `A bin already exists at coordinates X:${data.x}, Y:${data.y} (${existingBin.code})`);
+        return this.error(res, `A bin already exists at coordinates X:${data.x}, Y:${data.y}, Z:${data.z || 0} (${existingBin.code})`);
       }
 
       if (!data.code || data.code.trim() === '') {
@@ -37,9 +37,9 @@ class BinController extends BaseController {
       
       // Enforce unique coordinates on update
       if (data.x !== undefined && data.y !== undefined) {
-        const existingBin = await this.model.findByCoords(data.x, data.y);
+        const existingBin = await this.model.findByCoords(data.x, data.y, data.z);
         if (existingBin && existingBin.id !== id) {
-          return this.error(res, `A bin already exists at coordinates X:${data.x}, Y:${data.y} (${existingBin.code})`);
+          return this.error(res, `A bin already exists at coordinates X:${data.x}, Y:${data.y}, Z:${data.z || 0} (${existingBin.code})`);
         }
       }
 
